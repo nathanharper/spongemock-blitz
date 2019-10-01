@@ -7,8 +7,8 @@
     "node": "11.x"
   },
   "dependencies": {
-    "express": "^4.17.1",
-    "spongemock": "0.0.8"
+    "absurdify": "^1.1.4",
+    "express": "^4.17.1"
   },
   "scripts": {
     "start": "node index.js"
