@@ -19,6 +19,7 @@ app.post('/', (req, res) => {
 app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
 
 function getPayload({ user_id, text }) {
+    console.log(text)
     text = text.trim();
     let user = `<@${user_id}>`;
 
