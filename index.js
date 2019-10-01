@@ -18,8 +18,34 @@ app.post('/', (req, res) => {
 app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
 
 function getPayload({ user_id, text }) {
+    let user = `<@${user_id}>`;
+
+    if (/^<\@.+> /.test(text)) {
+        const [userString, message] = text.split(' ', 2);
+        user = userString;
+        text = message;
+    }
+
     return {
         response_type: 'in_channel',
-        text: `<@${user_id}> says: ` + absurd(text || '')
+        replace_original: true,
+        delete_original: true,
+        blocks: [
+            {
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: absurd(text || ''),
+                    emoji: true
+                }
+            },
+            {
+                type: 'section',
+                elements: {
+                    type: 'mrkdwn',
+                    text: `Posted by ${user}`
+                }
+            }
+        ]
     };
 }
