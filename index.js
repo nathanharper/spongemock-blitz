@@ -20,6 +20,6 @@ app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
 function getPayload({ user_id, text }) {
     return {
         response_type: 'in_channel',
-        text: `${user_id} says: ` + absurd(text || '')
+        text: `<@${user_id}> says: ` + absurd(text || '')
     };
 }
