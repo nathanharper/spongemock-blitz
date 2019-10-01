@@ -27,23 +27,21 @@ function getPayload({ user_id, text }) {
     }
 
     return {
-        response_type: 'in_channel',
-        replace_original: true,
-        delete_original: true,
-        blocks: [
+        "response_type": "in_channel",
+        "blocks": [
             {
-                type: 'section',
-                text: {
-                    type: 'plain_text',
-                    text: absurd(text || ''),
-                    emoji: true
+                "type": "section",
+                "text": {
+                    "type": "plain_text",
+                    "text": absurd(text || ''),
+                    "emoji": true
                 }
             },
             {
-                type: 'context',
-                elements: {
-                    type: 'mrkdwn',
-                    text: `Posted by ${user}`
+                "type": "context",
+                "elements": {
+                    "type": "mrkdwn",
+                    "text": `Posted by ${user}`
                 }
             }
         ]
