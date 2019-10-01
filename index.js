@@ -34,7 +34,7 @@ function getPayload({ user_id, text }) {
             {
                 type: 'section',
                 text: {
-                    type: 'mrkdwn',
+                    type: 'plain_text',
                     text: absurd(text || ''),
                     emoji: true
                 }
