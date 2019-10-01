@@ -8,11 +8,15 @@ const app = express()
     .use(bodyParser.json());
 
 app.get('/', (req, res) => {
-    res.send(absurd(req.query.text || ''));
+    res.send(spongemock(req.query));
 })
 
 app.post('/', (req, res) => {
-    res.send(absurd(req.body.text || ''));
+    res.send(spongemock(req.body));
 })
 
 app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
+
+function spongemock({ user_id, text }) {
+    return `${user_id} says: ` + absurd(text || '');
+}
