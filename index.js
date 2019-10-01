@@ -8,15 +8,18 @@ const app = express()
     .use(bodyParser.json());
 
 app.get('/', (req, res) => {
-    res.send(spongemock(req.query));
+    res.json(getPayload(req.query));
 })
 
 app.post('/', (req, res) => {
-    res.send(spongemock(req.body));
+    res.json(getPayload(req.body));
 })
 
 app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
 
-function spongemock({ user_id, text }) {
-    return `${user_id} says: ` + absurd(text || '');
+function getPayload({ user_id, text }) {
+    return {
+        response_type: 'in_channel',
+        text: `${user_id} says: ` + absurd(text || '')
+    };
 }
