@@ -19,6 +19,7 @@ app.post('/', (req, res) => {
 app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
 
 function getPayload({ user_id, text }) {
+    text = text.trim();
     let user = `<@${user_id}>`;
 
     if (/^<\@.+> /.test(text)) {
@@ -29,13 +30,19 @@ function getPayload({ user_id, text }) {
 
     return {
         "response_type": "in_channel",
+        "replace_original": true,
+        "delete_original": true,
         "blocks": [
             {
                 "type": "section",
                 "text": {
-                    "type": "plain_text",
+                    "type": "mrkdwn",
                     "text": absurd(text || ''),
-                    "emoji": true
+                },
+                "accessory": {
+                    "type": "image",
+                    "image_url": "https://spongemock-blitz.herokuapp.com/spongeo.jpg",
+                    "alt_text": "Spongebob"
                 }
             },
             {
