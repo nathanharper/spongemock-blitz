@@ -5,7 +5,8 @@ const port = process.env.PORT || 80;
 
 const app = express()
     .use(bodyParser.urlencoded({ extended: false }))
-    .use(bodyParser.json());
+    .use(bodyParser.json())
+    .use(express.static('public'));
 
 app.get('/', (req, res) => {
     res.json(getPayload(req.query));
@@ -39,10 +40,12 @@ function getPayload({ user_id, text }) {
             },
             {
                 "type": "context",
-                "elements": {
-                    "type": "mrkdwn",
-                    "text": `Posted by ${user}`
-                }
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": `Posted by ${user}`
+                    }
+                ]
             }
         ]
     };
