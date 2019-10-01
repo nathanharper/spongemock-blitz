@@ -40,7 +40,7 @@ function getPayload({ user_id, text }) {
                 }
             },
             {
-                type: 'section',
+                type: 'context',
                 elements: {
                     type: 'mrkdwn',
                     text: `Posted by ${user}`
