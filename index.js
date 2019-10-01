@@ -24,9 +24,9 @@ function getPayload(data) {
     let user = `<@${user_id}>`;
 
     if (/^@/.test(text)) {
-        const [userString, message] = text.split(' ', 2);
+        const [userString, ...theRest] = text.split(' ');
         user = userString;
-        text = message;
+        text = theRest.join(' ');
     }
 
     return {
