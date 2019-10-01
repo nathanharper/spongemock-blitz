@@ -20,11 +20,10 @@ app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
 
 function getPayload(data) {
     let { user_id, text} = data;
-    console.log(data)
     text = text.trim();
     let user = `<@${user_id}>`;
 
-    if (/^<\@.+> /.test(text)) {
+    if (/^@/.test(text)) {
         const [userString, message] = text.split(' ', 2);
         user = userString;
         text = message;
