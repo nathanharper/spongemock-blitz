@@ -1,0 +1,14 @@
+{
+  "name": "spongemock",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.1",
+    "spongemock": "^0.0.8"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev-start": "NODE_ENV=development node index.js"
+  }
+}
