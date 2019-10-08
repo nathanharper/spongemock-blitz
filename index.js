@@ -4,32 +4,37 @@ const bodyParser = require('body-parser');
 const port = process.env.PORT || 80;
 
 const app = express()
+
+    // setup
     .use(bodyParser.urlencoded({ extended: false }))
     .use(bodyParser.json())
-    .use(express.static('public'));
+    .use(express.static('public'))
 
-app.get('/', (req, res) => {
-    res.json(getPayload(req.query));
-})
+    // route
+    .all('/', spongemock)
+    .all('/clapback', clapback)
 
-app.post('/', (req, res) => {
-    res.json(getPayload(req.body));
-})
+    // listen
+    .listen(port, () => console.log(`Spongemock is running on port ${port}!`));
 
-app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
+const clap = ':clap:';
+function getData(req) {
+    return req.method === 'POST' ? req.body : req.query;
+}
 
-function getPayload(data) {
-    let { user_id, text} = data;
-    text = text.trim();
+function spongemock(req, res) {
+    let { user_id, text } = getData(req);
+    text = (text || '').trim();
     let user = `<@${user_id}>`;
 
+    //  if the text starts with ampersand, use that value as the quoted user to display.
     if (/^@/.test(text)) {
         const [userString, ...theRest] = text.split(' ');
         user = userString;
         text = theRest.join(' ');
     }
 
-    return {
+    res.json({
         "response_type": "in_channel",
         "replace_original": true,
         "delete_original": true,
@@ -56,5 +61,24 @@ function getPayload(data) {
                 ]
             }
         ]
-    };
+    });
+}
+
+function clapback(req, res) {
+    const text = (getData(req).text || '').trim();
+
+    res.json({
+        "response_type": "in_channel",
+        "replace_original": true,
+        "delete_original": true,
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": `${clap} ${text.split(' ').join(` ${clap} `)} ${clap}`,
+                },
+            },
+        ]
+    });
 }
