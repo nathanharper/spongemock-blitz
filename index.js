@@ -45,11 +45,6 @@ function spongemock(req, res) {
                     "type": "mrkdwn",
                     "text": absurd(text || ''),
                 },
-                "accessory": {
-                    "type": "image",
-                    "image_url": "https://spongemock-blitz.herokuapp.com/spongeo.jpg",
-                    "alt_text": "Spongebob"
-                }
             },
             {
                 "type": "context",
