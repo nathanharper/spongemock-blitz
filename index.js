@@ -71,7 +71,7 @@ function clapback(req, res) {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `${clap} ${text.split(' ').join(` ${clap} `)} ${clap}`,
+                    "text": `${text.split(' ').join(` ${clap} `)} ${clap}`,
                 },
             },
         ]
