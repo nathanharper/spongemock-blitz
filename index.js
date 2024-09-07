@@ -1,7 +1,7 @@
 const absurd = require('absurdify');
 const express = require('express');
 const bodyParser = require('body-parser');
-const randomCuss = require('./cusser.js');
+const randomInsult = require('./cusser.js');
 const port = process.env.PORT || 80;
 
 const app = express()
