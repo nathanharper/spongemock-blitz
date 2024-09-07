@@ -1,6 +1,7 @@
 const absurd = require('absurdify');
 const express = require('express');
 const bodyParser = require('body-parser');
+const randomCuss = require('./cusser.js');
 const port = process.env.PORT || 80;
 
 const app = express()
@@ -12,7 +13,9 @@ const app = express()
 
     // route
     .all('/', spongemock)
+    .all('/spongemock', spongemock)
     .all('/clapback', clapback)
+    .all('/insult', insult)
 
     // listen
     .listen(port, () => console.log(`Spongemock is running on port ${port}!`));
@@ -72,6 +75,23 @@ function clapback(req, res) {
                 "text": {
                     "type": "mrkdwn",
                     "text": `${text.split(' ').join(` ${clap} `)} ${clap}`,
+                },
+            },
+        ]
+    });
+}
+
+function insult(req, res) {
+    res.json({
+        "response_type": "in_channel",
+        "replace_original": true,
+        "delete_original": true,
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": randomInsult(),
                 },
             },
         ]
