@@ -2,6 +2,7 @@ const absurd = require('absurdify');
 const express = require('express');
 const bodyParser = require('body-parser');
 const randomInsult = require('./cusser.js');
+const discord = require('./discord');
 const port = process.env.PORT || 80;
 
 const app = express()
@@ -16,6 +17,7 @@ const app = express()
     .all('/spongemock', spongemock)
     .all('/clapback', clapback)
     .all('/insult', insult)
+    .all('/discord', discord)
 
     // listen
     .listen(port, () => console.log(`Spongemock is running on port ${port}!`));
