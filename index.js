@@ -41,8 +41,6 @@ function spongemock(req, res) {
 
     res.json({
         "response_type": "in_channel",
-        "replace_original": true,
-        "delete_original": true,
         "blocks": [
             {
                 "type": "section",
@@ -69,8 +67,6 @@ function clapback(req, res) {
 
     res.json({
         "response_type": "in_channel",
-        "replace_original": true,
-        "delete_original": true,
         "blocks": [
             {
                 "type": "section",
