@@ -336,7 +336,7 @@ async function runRandomizer(data) {
 
     const post = await client.chat.postMessage({
         channel,
-        text: `${mentionLine}, *you've been Randomized!* :gamme_die:`,
+        text: `${mentionLine}, *you've been Randomized!* :game_die:`,
         blocks: [
             {
                 type: 'section',
