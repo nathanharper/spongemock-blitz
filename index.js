@@ -13,25 +13,133 @@ dotenv.config();
 const RANDOMIZER_DEFAULT_CHANNEL =
     process.env.RANDOMIZER_DEFAULT_CHANNEL || 'tvtalk';
 
+/** Bot scopes for GET /slack/install → oauth/v2/authorize (comma-separated). */
+const SLACK_OAUTH_BOT_SCOPES =
+    process.env.SLACK_BOT_SCOPES ||
+    'commands,incoming-webhook,users:read,chat:write';
+
 const port = process.env.PORT || 80;
 
-const app = express()
+const app = express();
 
-    // setup
-    .use(bodyParser.urlencoded({ extended: false }))
-    .use(bodyParser.json())
-    .use(express.static('public'))
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(express.static('public'));
 
-    // route
-    .all('/', spongemock)
-    .all('/spongemock', spongemock)
-    .all('/clapback', clapback)
-    .all('/insult', insult)
-    .all('/randomizer', randomizer)
-    .all('/discord', verifyKeyMiddleware(process.env.PUBLIC_KEY), discord)
+app.get('/slack/install', slackOauthAuthorizeRedirect);
+app.get('/slack/oauth/callback', slackOauthCallback);
 
-    // listen
-    .listen(port, () => console.log(`Spongemock is running on port ${port}!`));
+app.all('/', spongemock);
+app.all('/spongemock', spongemock);
+app.all('/clapback', clapback);
+app.all('/insult', insult);
+app.all('/randomizer', randomizer);
+app.all('/discord', verifyKeyMiddleware(process.env.PUBLIC_KEY), discord);
+
+app.listen(port, () => console.log(`Spongemock is running on port ${port}!`));
+
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function slackOauthAuthorizeRedirect(req, res) {
+    const clientId = process.env.SLACK_CLIENT_ID;
+    const redirectUri = process.env.SLACK_REDIRECT_URI;
+    if (!clientId || !redirectUri) {
+        res.status(500).type('html').send(
+            '<p>Configure <code>SLACK_CLIENT_ID</code> and <code>SLACK_REDIRECT_URI</code>.</p>'
+        );
+        return;
+    }
+    const url = new URL('https://slack.com/oauth/v2/authorize');
+    url.searchParams.set('client_id', clientId);
+    url.searchParams.set('scope', SLACK_OAUTH_BOT_SCOPES);
+    url.searchParams.set('redirect_uri', redirectUri);
+    res.redirect(302, url.toString());
+}
+
+async function slackOauthCallback(req, res) {
+    const oauthError = req.query.error;
+    if (oauthError) {
+        res.status(400)
+            .type('html')
+            .send(`<p>OAuth error: ${escapeHtml(oauthError)}</p>`);
+        return;
+    }
+
+    const code = req.query.code;
+    if (!code || typeof code !== 'string') {
+        res.status(400).type('html').send('<p>Missing <code>code</code>.</p>');
+        return;
+    }
+
+    const clientId = process.env.SLACK_CLIENT_ID;
+    const clientSecret = process.env.SLACK_CLIENT_SECRET;
+    const redirectUri = process.env.SLACK_REDIRECT_URI;
+    if (!clientId || !clientSecret || !redirectUri) {
+        res.status(500).type('html').send(
+            '<p>Configure <code>SLACK_CLIENT_ID</code>, <code>SLACK_CLIENT_SECRET</code>, and <code>SLACK_REDIRECT_URI</code>.</p>'
+        );
+        return;
+    }
+
+    const body = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri,
+    });
+
+    const tokenRes = await fetch('https://slack.com/api/oauth.v2.access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+    });
+
+    const data = await tokenRes.json();
+    if (!data.ok) {
+        res.status(400)
+            .type('html')
+            .send(
+                `<p>oauth.v2.access failed: ${escapeHtml(data.error || 'unknown')}</p>`
+            );
+        return;
+    }
+
+    // OAuth v2 success: bot token is access_token when token_type is "bot"
+    const botToken = data.access_token;
+    const teamName = data.team?.name || data.team?.id || 'workspace';
+    const tokenType = data.token_type || 'bot';
+
+    if (!botToken) {
+        res.status(500).type('html').send(
+            '<p>Unexpected response: no <code>access_token</code>. Check oauth.v2 payload.</p>'
+        );
+        return;
+    }
+
+    if (data.incoming_webhook?.url) {
+        console.log('[slack oauth] incoming_webhook URL issued (store in env or secrets if you use it)');
+    }
+
+    let webhookNote = '';
+    if (data.incoming_webhook?.url) {
+        webhookNote = `<p>Incoming webhook URL (store securely):</p><pre>${escapeHtml(data.incoming_webhook.url)}</pre>`;
+    }
+
+    res.type('html').send(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Slack app installed</title></head>
+<body>
+  <p>Installed to <strong>${escapeHtml(teamName)}</strong> (token type: ${escapeHtml(tokenType)}).</p>
+  <p>Set this as <code>SLACK_BOT_TOKEN</code> for this server:</p>
+  <pre>${escapeHtml(botToken)}</pre>
+  ${webhookNote}
+</body></html>`);
+}
 
 const clap = ':clap:';
 function getData(req) {
