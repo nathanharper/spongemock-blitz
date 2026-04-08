@@ -187,22 +187,13 @@ async function runRandomizer(data) {
                 type: 'section',
                 text: {
                     type: 'mrkdwn',
-                    text: `<@${chosen.id}> *You've been randomized!* :game_die:`,
+                    text: `<@${chosen.id}> *You've been randomized!* :game_die: Identify this image as fast as you can!`,
                 },
             },
             {
                 type: 'image',
                 image_url: imageUrl,
                 alt_text: 'Random photo (Picsum Photos)',
-            },
-            {
-                type: 'context',
-                elements: [
-                    {
-                        type: 'mrkdwn',
-                        text: `Chosen by <@${data.user_id}>`,
-                    },
-                ],
             },
         ],
     });
