@@ -332,19 +332,17 @@ async function runRandomizer(data) {
     });
 
     const mentionLine = `<@${a.id}> and <@${b.id}>`;
-    const rules =
-        `${mentionLine}, *you've been randomized!* :dice:\n\n` +
-        'The first of you to reply *in this thread* with an accurate description of the image subject wins this round!';
+    const rules = `The first of you to reply *in this thread* with an accurate description of the image subject wins this round!`;
 
     const post = await client.chat.postMessage({
         channel,
-        text: `${mentionLine} You've been Randomized!`,
+        text: `${mentionLine}, *you've been Randomized!* :gamme_die:`,
         blocks: [
             {
                 type: 'section',
                 text: {
                     type: 'mrkdwn',
-                    text: `${mentionLine}\n${rules}`,
+                    text: rules,
                 },
             },
             {
