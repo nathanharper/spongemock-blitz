@@ -144,35 +144,13 @@ function getData(req) {
 }
 
 function slackTokenMissing(res) {
-    res.json({
-        response_type: 'ephemeral',
-        text: 'Slack bot token missing. Set SLACK_BOT_TOKEN in the environment.',
-    });
+    console.warn('[slack] SLACK_BOT_TOKEN is not set');
+    res.status(200).end();
 }
 
 function slackNeedsChannel(res) {
-    res.json({
-        response_type: 'ephemeral',
-        text: 'This command must be run from Slack in a channel or DM the bot can post in.',
-    });
-}
-
-async function postSlashCommandError(responseUrl, message) {
-    if (!responseUrl) {
-        return;
-    }
-    try {
-        await fetch(responseUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                response_type: 'ephemeral',
-                text: `Command failed: ${message}`,
-            }),
-        });
-    } catch (_) {
-        /* ignore */
-    }
+    console.warn('[slack] slash command missing channel_id');
+    res.status(200).end();
 }
 
 function spongemock(req, res) {
@@ -186,14 +164,12 @@ function spongemock(req, res) {
         return;
     }
 
-    let { user_id, text } = data;
+    let { text } = data;
     text = (text || '').trim();
-    let user = `<@${user_id}>`;
 
-    //  if the text starts with ampersand, use that value as the quoted user to display.
+    //  if the text starts with @, drop that token (legacy: was used for attribution only).
     if (/^@/.test(text)) {
-        const [userString, ...theRest] = text.split(' ');
-        user = userString;
+        const [, ...theRest] = text.split(' ');
         text = theRest.join(' ');
     }
 
@@ -205,18 +181,9 @@ function spongemock(req, res) {
                 text: absurd(text || ''),
             },
         },
-        {
-            type: 'context',
-            elements: [
-                {
-                    type: 'mrkdwn',
-                    text: `Posted by ${user}`,
-                },
-            ],
-        },
     ];
 
-    res.json({ response_type: 'ephemeral', text: 'Posting…' });
+    res.status(200).end();
 
     void (async () => {
         const client = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -230,7 +197,6 @@ function spongemock(req, res) {
         }
     })().catch((err) => {
         console.error('[spongemock]', err);
-        void postSlashCommandError(data.response_url, err.message || String(err));
     });
 }
 
@@ -257,7 +223,7 @@ function clapback(req, res) {
         },
     ];
 
-    res.json({ response_type: 'ephemeral', text: 'Posting…' });
+    res.status(200).end();
 
     void (async () => {
         const client = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -271,7 +237,6 @@ function clapback(req, res) {
         }
     })().catch((err) => {
         console.error('[clapback]', err);
-        void postSlashCommandError(data.response_url, err.message || String(err));
     });
 }
 
@@ -297,7 +262,7 @@ function insult(req, res) {
         },
     ];
 
-    res.json({ response_type: 'ephemeral', text: 'Posting…' });
+    res.status(200).end();
 
     void (async () => {
         const client = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -311,7 +276,6 @@ function insult(req, res) {
         }
     })().catch((err) => {
         console.error('[insult]', err);
-        void postSlashCommandError(data.response_url, err.message || String(err));
     });
 }
 
@@ -392,13 +356,9 @@ function randomizer(req, res) {
         return;
     }
 
-    res.json({
-        response_type: 'ephemeral',
-        text: 'Picking someone and posting…',
-    });
+    res.status(200).end();
 
     void runRandomizer(data).catch((err) => {
         console.error('[randomizer]', err);
-        void postSlashCommandError(data.response_url, err.message || String(err));
     });
 }
