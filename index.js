@@ -10,13 +10,10 @@ const {verifyKeyMiddleware} = require('discord-interactions');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const RANDOMIZER_DEFAULT_CHANNEL =
-    process.env.RANDOMIZER_DEFAULT_CHANNEL || 'tvtalk';
-
 /** Bot scopes for GET /slack/install → oauth/v2/authorize (comma-separated). */
 const SLACK_OAUTH_BOT_SCOPES =
     process.env.SLACK_BOT_SCOPES ||
-    'commands,incoming-webhook,users:read';
+    'commands,incoming-webhook,users:read,chat:write';
 
 const port = process.env.PORT || 80;
 
@@ -146,8 +143,50 @@ function getData(req) {
     return req.method === 'POST' ? req.body : req.query;
 }
 
+function slackTokenMissing(res) {
+    res.json({
+        response_type: 'ephemeral',
+        text: 'Slack bot token missing. Set SLACK_BOT_TOKEN in the environment.',
+    });
+}
+
+function slackNeedsChannel(res) {
+    res.json({
+        response_type: 'ephemeral',
+        text: 'This command must be run from Slack in a channel or DM the bot can post in.',
+    });
+}
+
+async function postSlashCommandError(responseUrl, message) {
+    if (!responseUrl) {
+        return;
+    }
+    try {
+        await fetch(responseUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                response_type: 'ephemeral',
+                text: `Command failed: ${message}`,
+            }),
+        });
+    } catch (_) {
+        /* ignore */
+    }
+}
+
 function spongemock(req, res) {
-    let { user_id, text } = getData(req);
+    if (!process.env.SLACK_BOT_TOKEN) {
+        slackTokenMissing(res);
+        return;
+    }
+    const data = getData(req);
+    if (!data.channel_id) {
+        slackNeedsChannel(res);
+        return;
+    }
+
+    let { user_id, text } = data;
     text = (text || '').trim();
     let user = `<@${user_id}>`;
 
@@ -158,74 +197,122 @@ function spongemock(req, res) {
         text = theRest.join(' ');
     }
 
-    res.json({
-        "response_type": "in_channel",
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": absurd(text || ''),
-                },
+    const blocks = [
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: absurd(text || ''),
             },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": `Posted by ${user}`
-                    }
-                ]
-            }
-        ]
+        },
+        {
+            type: 'context',
+            elements: [
+                {
+                    type: 'mrkdwn',
+                    text: `Posted by ${user}`,
+                },
+            ],
+        },
+    ];
+
+    res.json({ response_type: 'ephemeral', text: 'Posting…' });
+
+    void (async () => {
+        const client = new WebClient(process.env.SLACK_BOT_TOKEN);
+        const post = await client.chat.postMessage({
+            channel: data.channel_id,
+            text: absurd(text || ''),
+            blocks,
+        });
+        if (!post.ok) {
+            throw new Error(post.error || 'chat.postMessage failed');
+        }
+    })().catch((err) => {
+        console.error('[spongemock]', err);
+        void postSlashCommandError(data.response_url, err.message || String(err));
     });
 }
 
 function clapback(req, res) {
-    const text = (getData(req).text || '').trim();
+    if (!process.env.SLACK_BOT_TOKEN) {
+        slackTokenMissing(res);
+        return;
+    }
+    const data = getData(req);
+    if (!data.channel_id) {
+        slackNeedsChannel(res);
+        return;
+    }
 
-    res.json({
-        "response_type": "in_channel",
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": `${text.split(' ').join(` ${clap} `)} ${clap}`,
-                },
+    const text = (data.text || '').trim();
+    const bodyText = `${text.split(' ').join(` ${clap} `)} ${clap}`;
+    const blocks = [
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: bodyText,
             },
-        ]
+        },
+    ];
+
+    res.json({ response_type: 'ephemeral', text: 'Posting…' });
+
+    void (async () => {
+        const client = new WebClient(process.env.SLACK_BOT_TOKEN);
+        const post = await client.chat.postMessage({
+            channel: data.channel_id,
+            text: bodyText,
+            blocks,
+        });
+        if (!post.ok) {
+            throw new Error(post.error || 'chat.postMessage failed');
+        }
+    })().catch((err) => {
+        console.error('[clapback]', err);
+        void postSlashCommandError(data.response_url, err.message || String(err));
     });
 }
 
 function insult(req, res) {
-    res.json({
-        "response_type": "in_channel",
-        "replace_original": true,
-        "delete_original": true,
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": randomInsult(),
-                },
-            },
-        ]
-    });
-}
+    if (!process.env.SLACK_BOT_TOKEN) {
+        slackTokenMissing(res);
+        return;
+    }
+    const data = getData(req);
+    if (!data.channel_id) {
+        slackNeedsChannel(res);
+        return;
+    }
 
-function parseRandomizerChannel(text) {
-    const raw = (text || '').trim();
-    if (!raw) {
-        return RANDOMIZER_DEFAULT_CHANNEL;
-    }
-    const link = raw.match(/^<#(C[A-Z0-9]+)(?:\|[^>]+)?>/);
-    if (link) {
-        return link[1];
-    }
-    const token = raw.split(/\s+/)[0];
-    return token.replace(/^#/, '');
+    const insultText = randomInsult();
+    const blocks = [
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: insultText,
+            },
+        },
+    ];
+
+    res.json({ response_type: 'ephemeral', text: 'Posting…' });
+
+    void (async () => {
+        const client = new WebClient(process.env.SLACK_BOT_TOKEN);
+        const post = await client.chat.postMessage({
+            channel: data.channel_id,
+            text: insultText,
+            blocks,
+        });
+        if (!post.ok) {
+            throw new Error(post.error || 'chat.postMessage failed');
+        }
+    })().catch((err) => {
+        console.error('[insult]', err);
+        void postSlashCommandError(data.response_url, err.message || String(err));
+    });
 }
 
 async function listAllWorkspaceMembers(client) {
@@ -257,27 +344,9 @@ function pickRandomHumanMember(members) {
     return eligible[Math.floor(Math.random() * eligible.length)];
 }
 
-async function postRandomizerError(responseUrl, message) {
-    if (!responseUrl) {
-        return;
-    }
-    try {
-        await fetch(responseUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                response_type: 'ephemeral',
-                text: `Randomizer failed: ${message}`,
-            }),
-        });
-    } catch (_) {
-        /* ignore */
-    }
-}
-
 async function runRandomizer(data) {
     const client = new WebClient(process.env.SLACK_BOT_TOKEN);
-    const channel = parseRandomizerChannel(data.text);
+    const channel = data.channel_id;
     const members = await listAllWorkspaceMembers(client);
     const chosen = pickRandomHumanMember(members);
     const imageUrl = faker.image.urlPicsumPhotos({
@@ -313,21 +382,23 @@ async function runRandomizer(data) {
 
 function randomizer(req, res) {
     if (!process.env.SLACK_BOT_TOKEN) {
-        res.json({
-            response_type: 'ephemeral',
-            text: 'Slack bot token missing. Set SLACK_BOT_TOKEN in the environment.',
-        });
+        slackTokenMissing(res);
         return;
     }
 
     const data = getData(req);
+    if (!data.channel_id) {
+        slackNeedsChannel(res);
+        return;
+    }
+
     res.json({
         response_type: 'ephemeral',
-        text: 'Picking someone and posting to the channel…',
+        text: 'Picking someone and posting…',
     });
 
     void runRandomizer(data).catch((err) => {
         console.error('[randomizer]', err);
-        void postRandomizerError(data.response_url, err.message || String(err));
+        void postSlashCommandError(data.response_url, err.message || String(err));
     });
 }
