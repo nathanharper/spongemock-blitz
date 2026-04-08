@@ -293,8 +293,8 @@ async function listAllWorkspaceMembers(client) {
     return members;
 }
 
-function pickRandomHumanMember(members) {
-    const eligible = members.filter(
+function getEligibleHumanMembers(members) {
+    return members.filter(
         (m) =>
             m &&
             !m.deleted &&
@@ -302,17 +302,28 @@ function pickRandomHumanMember(members) {
             m.name !== 'slackbot' &&
             !m.is_stranger
     );
-    if (!eligible.length) {
-        throw new Error('No eligible workspace members found.');
+}
+
+function pickTwoDistinctRandomHumanMembers(members) {
+    const eligible = getEligibleHumanMembers(members);
+    if (eligible.length < 2) {
+        throw new Error(
+            'Need at least two eligible workspace members for the randomizer.'
+        );
     }
-    return eligible[Math.floor(Math.random() * eligible.length)];
+    const i = Math.floor(Math.random() * eligible.length);
+    let j = Math.floor(Math.random() * eligible.length);
+    while (j === i) {
+        j = Math.floor(Math.random() * eligible.length);
+    }
+    return [eligible[i], eligible[j]];
 }
 
 async function runRandomizer(data) {
     const client = new WebClient(process.env.SLACK_BOT_TOKEN);
     const channel = data.channel_id;
     const members = await listAllWorkspaceMembers(client);
-    const chosen = pickRandomHumanMember(members);
+    const [a, b] = pickTwoDistinctRandomHumanMembers(members);
     const imageUrl = faker.image.urlPicsumPhotos({
         width: 800,
         height: 500,
@@ -320,21 +331,26 @@ async function runRandomizer(data) {
         grayscale: false,
     });
 
+    const mentionLine = `<@${a.id}> and <@${b.id}>`;
+    const rules =
+        `${mentionLine}, *you've been randomized!* :dice:\n\n` +
+        'The first of you to reply *in this thread* with an accurate description of the image subject wins this round!';
+
     const post = await client.chat.postMessage({
         channel,
-        text: `<@${chosen.id}> you've been randomized!`,
+        text: `${mentionLine} You've been Randomized!`,
         blocks: [
             {
                 type: 'section',
                 text: {
                     type: 'mrkdwn',
-                    text: `<@${chosen.id}> *You've been randomized!* :game_die: Identify this image as fast as you can!`,
+                    text: `${mentionLine}\n${rules}`,
                 },
             },
             {
                 type: 'image',
                 image_url: imageUrl,
-                alt_text: 'Random photo (Picsum Photos)',
+                alt_text: 'Random photo — guess the subject',
             },
         ],
     });
