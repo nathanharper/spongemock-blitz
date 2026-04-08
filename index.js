@@ -16,7 +16,7 @@ const RANDOMIZER_DEFAULT_CHANNEL =
 /** Bot scopes for GET /slack/install → oauth/v2/authorize (comma-separated). */
 const SLACK_OAUTH_BOT_SCOPES =
     process.env.SLACK_BOT_SCOPES ||
-    'commands,incoming-webhook,users:read,chat:write';
+    'commands,incoming-webhook,users:read';
 
 const port = process.env.PORT || 80;
 
